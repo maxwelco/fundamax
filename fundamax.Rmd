@@ -1,0 +1,581 @@
+---
+title: "FundaMax"
+#author: "Maxwel Coura Oliveira"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    theme: readable
+#    source_code: embed
+    social: "menu" #[ "twitter", "linkedin", "facebook" ]
+    navbar: 
+#      - { title: "Sobre mim", href: "https://github.com/maxwelco", align: right}
+      - { icon: fa-address-card, href: "https://maxweeds.rbind.io/", align: right}
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+#rsconnect::deployApp('/Users/maxwelco/Documents/shiny.finances/fundamax.Rmd')
+options(scipen=10000)
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+library(lubridate)
+library(rvest)
+library(RCurl)
+library(googlesheets4)
+```
+
+
+```{r}
+#proventos
+source("proventos_function.R")
+```
+
+
+```{r}
+# empresas listadas - precisa atualizar
+#gs4_auth(email = "maxwelco@gmail.com")
+#empresas <- read_sheet("https://docs.google.com/spreadsheets/d/1vtts8WdUYYVqi9ygLlIuWzS_ISefoR4WDLmC2E3pXCw/edit#gid=0") %>% 
+ # arrange(`SETOR ECONÔMICO`, SUBSETOR) 
+#readr::write_csv(empresas, "empresas.csv")
+empresas <- read_csv("empresas.csv")
+```
+
+# Dados {data-icon="fa fa-upload"}
+
+
+```{r}
+# download status invest
+status_invest <- "https://statusinvest.com.br/category/advancedsearchresultexport?search=%7B%22Sector%22%3A%22%22%2C%22SubSector%22%3A%22%22%2C%22Segment%22%3A%22%22%2C%22my_range%22%3A%220%3B25%22%2C%22dy%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22p_L%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22peg_Ratio%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22p_VP%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22p_Ativo%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22margemBruta%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22margemEbit%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22margemLiquida%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22p_Ebit%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22eV_Ebit%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22dividaLiquidaEbit%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22dividaliquidaPatrimonioLiquido%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22p_SR%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22p_CapitalGiro%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22p_AtivoCirculante%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22roe%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22roic%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22roa%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22liquidezCorrente%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22pl_Ativo%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22passivo_Ativo%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22giroAtivos%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22receitas_Cagr5%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22lucros_Cagr5%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22liquidezMediaDiaria%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22vpa%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22lpa%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%2C%22valorMercado%22%3A%7B%22Item1%22%3Anull%2C%22Item2%22%3Anull%7D%7D&CategoryType=1"
+
+status_data <- getURL(status_invest)
+dataset <- readr::read_csv2(status_data)
+```
+
+
+
+## Inputs {.sidebar}
+
+```{r}
+inputPanel(
+actionButton("refresh", label = "Obter dados",icon = icon("fa-refresh"))
+)
+
+getdata <- eventReactive(input$refresh, {
+    dataset <- readr::read_csv2(status_data)
+})
+
+```
+
+
+Clique em **Obter dados** para importar a tabela de fundamentos mais atualizada do site Status invest.
+
+Aplicativo construido para avaliar ativos pelo método de [Bazin](https://dicadehoje7.com/acoes/o-metodo-de-decio-bazin-funciona), [Gordon](https://maisretorno.com/portal/termos/m/modelo-de-gordon), [Graham](https://tc.com.br/tc-school/analise-fundamentalista/valor-acao-formula-ben-graham) e [Greenblat](https://dicadehoje7.com/acoes/a-formula-magica-de-greenblatt).
+
+
+## Row {data-height=400}
+
+```{r}
+renderTable({
+  getdata()
+})
+```
+
+
+
+
+# Fundamentos {data-icon="fa fa-table"}
+
+
+
+### Tabela de fundamentos {data-table=column data-height=1000}
+
+```{r}
+DT::renderDataTable({
+  DT::datatable(getdata(),
+  options = list(pageLength = 50, language = list(search = 'Procurar:', 
+                                               paginate =  list('next'= "Próximo",
+                                                                previous="Anterior"))))
+})
+```
+
+
+
+# Bazin {data-navmenu="Valuation" data-icon="fa fa-list-ol"}
+
+```{r}
+status <- reactive({getdata() %>% 
+    left_join(empresas, by = "TICKER") %>% 
+    mutate(`PREÇO R$` = PRECO) %>%
+    mutate(DPA = (DY/100) * `PREÇO R$`) %>% 
+    mutate(`VALUATION BAZIN RS` = DPA / 0.06) %>% 
+    mutate(`DESCONTO BAZIN %` = 
+             ((`PREÇO R$` - `VALUATION BAZIN RS`) / `VALUATION BAZIN RS`) * 100 * -1) %>% 
+    mutate(`VALUATION GRAHAM R$` = 
+             (22.5 * LPA * VPA)^0.5) %>% 
+    mutate(`DESCONTO GRAHAM %` = 
+             ((`PREÇO R$` - `VALUATION GRAHAM R$`) / 
+                                  `VALUATION GRAHAM R$`)*100 * -1) %>% 
+    mutate(`VALUATION GORDON R$` = 
+             (DPA * (1 + (`CAGR LUCROS 5 ANOS`/100))) / input$risco) %>% 
+    mutate(`DESCONTO GORDON %` = 
+             ((`PREÇO R$` - `VALUATION GORDON R$`) / 
+                                  `VALUATION GORDON R$`)*100 * -1) %>% 
+    mutate(`CAGR LUCROS 5 ANOS` = 
+           if_else(is.na(`CAGR LUCROS 5 ANOS`), 0, `CAGR LUCROS 5 ANOS`)) %>%
+    mutate(PAYOUT = DPA / LPA) %>% 
+    mutate(PAYOUT = 
+           if_else(is.na(PAYOUT), 0, PAYOUT)) %>%
+    mutate(`CRESCIMENTO ESPERADO %` = 
+             (1 - PAYOUT) * ROE) %>% 
+    mutate(`MÉDIA DE CRESCIMENTO %` = 
+             (`CAGR LUCROS 5 ANOS` + `CRESCIMENTO ESPERADO %`)/2) %>% 
+    mutate_if(is.double, ~round(., 2)) %>% 
+    filter(`PREÇO R$` != 0 & `PREÇO R$` < 1000) 
+})
+```
+
+
+
+## Inputs {.sidebar}
+
+```{r}
+inputPanel(
+  selectInput("select1", label = h4("Setor econômico"), 
+    choices = empresas$`SETOR ECONÔMICO`, selected = 1),
+  selectInput("select2", label = h4("Subsetor"), 
+    choices = empresas$SUBSETOR)
+)
+
+
+# Selectize 2 choice's list <---
+var1.choice <- reactive({
+                 status() %>% 
+                 filter(`SETOR ECONÔMICO` == input$select1) %>%
+                 pull(SUBSETOR)
+                  })
+    
+# Observe <---
+    observe({
+    updateSelectizeInput(session, "select2", choices = var1.choice())
+    })
+
+
+bazin <- reactive(status() %>%
+                    filter(`SETOR ECONÔMICO` == input$select1) %>% 
+                    filter(SUBSETOR == input$select2) %>% 
+                    arrange(desc(`DESCONTO BAZIN %`)) %>% 
+                    mutate(TICKER = fct_reorder(TICKER, `DESCONTO BAZIN %`)))
+```
+
+
+
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### Desconto de **Bazin** para os ativos mais descontados do setor selecionado.
+
+```{r}
+renderPlotly({
+bazin() %>% 
+    filter(!is.na(`DESCONTO BAZIN %`)) %>%
+    top_n(TICKER, n = 15) %>% 
+    pivot_longer(c("DESCONTO BAZIN %", "PEG Ratio", "MÉDIA DE CRESCIMENTO %"),
+               names_to = "TIPO", values_to = "VALOR") %>% 
+    mutate(TIPO = fct_relevel(TIPO, levels = c("DESCONTO BAZIN %",
+                                               "PEG Ratio",
+                                               "MÉDIA DE CRESCIMENTO %"))) %>% 
+    ggplot(aes(x = TICKER, y = VALOR, label = `PREÇO R$`)) + 
+    geom_bar(aes(fill = VALOR), stat="identity") +
+    scale_fill_viridis_c(option = "C") +
+    theme_test() +
+    labs(y = "", x = "") +
+    coord_flip() +
+    facet_wrap(~ TIPO, scales = "free") +
+    theme(legend.position = "none")
+})
+```
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### Tabela com todos os ativos do **setor econômico** e **subsetor** selecionado.
+
+```{r}
+DT::renderDataTable({
+
+bazin() %>% 
+  dplyr::select("TICKER", "SETOR ECONÔMICO", "SUBSETOR",
+                "PREÇO R$", "VALUATION BAZIN RS", "DESCONTO BAZIN %",
+                "CRESCIMENTO ESPERADO %", "MÉDIA DE CRESCIMENTO %") %>% 
+  DT::datatable(options = list(language = list(search = 'Procurar:', 
+                                               paginate =  list('next'= "Próximo",
+                                                                previous="Anterior"))))
+})
+```
+
+
+
+# Gordon {data-navmenu="Valuation" data-icon="fa fa-list-ol"}
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+inputPanel(
+  selectInput("select3", label = h4("Setor econômico"), 
+    choices = empresas$`SETOR ECONÔMICO`, selected = 1),
+  selectInput("select4", label = h4("Subsetor"), 
+    choices = empresas$SUBSETOR),
+  numericInput("risco", label = h4("Risco: "), value = 15)
+
+)
+
+
+# Selectize 2 choice's list <---
+var2.choice <- reactive({
+                 status() %>% 
+                 filter(`SETOR ECONÔMICO` == input$select3) %>%
+                 pull(SUBSETOR)
+                  })
+    
+# Observe <---
+    observe({
+    updateSelectizeInput(session, "select4", choices = var2.choice())
+    })
+
+
+gordon <- reactive(status() %>%
+                    filter(`SETOR ECONÔMICO` == input$select3) %>% 
+                    filter(SUBSETOR == input$select4) %>% 
+                    arrange(desc(`DESCONTO GORDON %`)) %>% 
+                    mutate(TICKER = fct_reorder(TICKER, `DESCONTO GORDON %`))) 
+```
+
+
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+
+### Desconto de **Gordon** para os ativos mais descontados do setor selecionado.
+
+```{r}
+renderPlotly({
+  
+gordon() %>% 
+    filter(!is.na(`DESCONTO GORDON %`)) %>%
+    top_n(TICKER, n = 15) %>% 
+    pivot_longer(c("DESCONTO GORDON %", "PEG Ratio", "MÉDIA DE CRESCIMENTO %"),
+               names_to = "TIPO", values_to = "VALOR") %>% 
+    mutate(TIPO = fct_relevel(TIPO, levels = c("DESCONTO GORDON %",
+                                               "PEG Ratio",
+                                               "MÉDIA DE CRESCIMENTO %"))) %>% 
+    ggplot(aes(x = TICKER, y = VALOR, label = `PREÇO R$`)) + 
+    geom_bar(aes(fill = VALOR), stat="identity") +
+    scale_fill_viridis_c(option = "C") +
+    theme_test() +
+    labs(y = "", x = "") +
+    coord_flip() +
+    facet_wrap(~ TIPO, scales = "free") +
+    theme(legend.position = "none")
+})
+```
+
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### Tabela com todos os ativos do **setor econômico** e **subsetor** selecionado.
+
+```{r}
+DT::renderDataTable({
+  gordon() %>% 
+  dplyr::select("TICKER", "SETOR ECONÔMICO", "SUBSETOR",
+                "PREÇO R$", "VALUATION GORDON R$", "DESCONTO GORDON %",
+                "PEG Ratio", "CRESCIMENTO ESPERADO %", "MÉDIA DE CRESCIMENTO %") %>% 
+  DT::datatable(options = list(language = list(search = 'Procurar:', 
+                                               paginate =  list('next'= "Próximo",
+                                                                previous="Anterior"))))
+})
+```
+
+
+
+
+# Graham {data-navmenu="Valuation" data-icon="fa fa-list-ol"}
+
+
+## Inputs {.sidebar}
+
+
+```{r}
+inputPanel(
+selectInput("select5", label = h4("Setor econômico"), 
+    choices = empresas$`SETOR ECONÔMICO`, selected = 1),
+selectInput("select6", label = h4("Subsetor"), 
+    choices = empresas$SUBSETOR)
+)
+
+
+# Selectize 2 choice's list <---
+var3.choice <- reactive({
+                 status() %>% 
+                 filter(`SETOR ECONÔMICO` == input$select5) %>%
+                 pull(SUBSETOR)
+                  })
+    
+# Observe <---
+    observe({
+    updateSelectizeInput(session, "select6", choices = var3.choice())
+    })
+       
+
+graham <- reactive(status() %>% 
+                    filter(`SETOR ECONÔMICO` == input$select5) %>% 
+                    filter(SUBSETOR == input$select6) %>% 
+                    arrange(desc(`DESCONTO GRAHAM %`)) %>% 
+                    mutate(TICKER = fct_reorder(TICKER, `DESCONTO GRAHAM %`)))
+```
+
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### Desconto de **Graham** para os ativos mais descontados do setor selecionado.
+
+```{r}
+renderPlotly({
+  
+graham() %>%
+    filter(!is.na(`DESCONTO GRAHAM %`)) %>%
+    top_n(TICKER, n = 15) %>% 
+    pivot_longer(c("DESCONTO GRAHAM %", "PEG Ratio", "MÉDIA DE CRESCIMENTO %"),
+               names_to = "TIPO", values_to = "VALOR") %>% 
+    mutate(TIPO = fct_relevel(TIPO, levels = c("DESCONTO GRAHAM %",
+                                               "PEG Ratio",
+                                               "MÉDIA DE CRESCIMENTO %"))) %>% 
+    ggplot(aes(x = TICKER, y = VALOR, label = `PREÇO R$`)) + 
+    geom_bar(aes(fill = VALOR), stat="identity") +
+    scale_fill_viridis_c(option = "C") +
+    theme_test() +
+    labs(y = "", x = "") +
+    coord_flip() +
+    facet_wrap(~ TIPO, scales = "free") +
+    theme(legend.position = "none")
+})
+```
+
+
+
+Row {data-height=600}
+-----------------------------------------------------------------------
+
+### Tabela com todos os ativos do **setor econômico** e **subsetor** selecionado.
+
+```{r}
+DT::renderDataTable({
+  graham() %>%  
+  dplyr::select("TICKER", "SETOR ECONÔMICO", "SUBSETOR", "PREÇO R$",  
+                "VALUATION GRAHAM R$", 
+                "DESCONTO GRAHAM %",
+                "PEG Ratio", "CRESCIMENTO ESPERADO %", "MÉDIA DE CRESCIMENTO %") %>% 
+  DT::datatable(options = list(language = list(search = 'Procurar:', 
+                                               paginate =  list('next'= "Próximo",
+                                                                previous="Anterior"))))
+})
+```
+
+
+
+
+# Greenblatt {data-navmenu="Valuation" data-icon="fa fa-list-ol"}
+
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+inputPanel(
+sliderInput("ativo5", label = h4("Quantidade de ativos: "), min = 1, 
+            value = 20, max = 50)
+)
+
+
+greendt <- reactive({getdata() %>% 
+    mutate(TICKER = as.character(TICKER)) %>% 
+    mutate(TICKER = str_remove(TICKER, "([0-9]+).*$")) %>% 
+    distinct(TICKER, .keep_all = TRUE) %>% 
+    dplyr::select(TICKER, PRECO, `EV/EBIT`, ROIC) %>%
+    filter(`EV/EBIT` > 0 & ROIC > 0) %>% 
+    arrange(`EV/EBIT`) %>% 
+    mutate(`NOTA EV/EBIT` = dense_rank(desc(`EV/EBIT`))) %>% 
+    arrange(ROIC) %>% 
+    mutate(`NOTA ROIC` = dense_rank(ROIC)) %>%
+    mutate(`NOTA FINAL` = `NOTA EV/EBIT` + `NOTA ROIC`) %>% 
+    arrange(desc(`NOTA FINAL`)) %>% 
+    mutate(TICKER = fct_reorder(TICKER, `NOTA FINAL`))
+    
+})
+```
+
+
+
+
+## Row {data-height=600}
+
+
+### Figura índice Greenblatt 
+
+```{r }
+renderPlotly({
+    greendt() %>% 
+    top_n(TICKER, n = input$ativo5) %>% 
+    ggplot(aes(x = TICKER, y = `NOTA FINAL`, 
+                                 fill = `NOTA FINAL`)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_c(option = "C") +
+    theme_test() +
+    labs(x = "") +
+    coord_flip() + 
+    theme(legend.position = "none")
+})
+```
+
+
+### Tabela índice Greenblatt 
+
+```{r}
+DT::renderDataTable({
+   greendt() %>%
+  dplyr::select("TICKER", "NOTA EV/EBIT", "NOTA ROIC", "NOTA FINAL") %>% 
+  DT::datatable(options = list(pageLength = 15, language = list(search = 'Procurar:', 
+                                               paginate =  list('next'= "Próximo",
+                                                                previous="Anterior"))))
+  
+})
+```
+
+
+
+
+
+
+
+
+
+# Proventos {data-icon="fa-usd"}
+
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+```{r}
+inputPanel(
+selectInput("ativo6", label = "Ativo", choices = fundamentus2$Papel)
+)
+```
+
+
+
+## Gráfico {data-height=400}
+
+
+### Data com - Ano 
+
+```{r}
+renderPlotly({
+proventos_function(input$ativo6) %>% 
+  ggplot(aes(x = Ano, y = Valor, fill = Tipo)) +
+    geom_bar(stat = "identity") +
+    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_fill_viridis_d(option = "B") +
+    labs(x = "", fill = "") +
+    theme_test() +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = "top")
+})
+```
+
+
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### Data com - Semana
+
+```{r}
+renderPlotly({
+proventos_function(input$ativo6) %>% 
+  ggplot(aes(x = Semana, y = Valor, fill = Tipo)) +
+    geom_bar(stat = "identity") +
+    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_fill_viridis_d(option = "B") +
+    labs(x = "", fill = "") +
+    theme_test() +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = "bottom")
+})
+```
+
+### Data com - Dia da semana
+
+```{r}
+renderPlotly({
+proventos_function(input$ativo6) %>% 
+    ggplot(aes(x = Sem_dia, y = Valor, fill = Tipo)) +
+    geom_bar(stat = "identity") +
+    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_fill_viridis_d(option = "B") +
+    labs(x = "", fill = "") +
+    theme_test() +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = "bottom")
+})
+```
+
+
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### Data com - Dia
+
+```{r}
+renderPlotly({
+proventos_function(input$ativo6) %>% 
+    ggplot(aes(x = Dia, y = Valor, fill = Tipo)) +
+    geom_bar(stat = "identity") +
+    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_fill_viridis_d(option = "B") +
+    labs(x = "", fill = "") +
+    theme_test() +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = "bottom")
+})
+```
+
+### Data com - Mês
+
+```{r}
+renderPlotly({
+proventos_function(input$ativo6) %>% 
+    ggplot(aes(x =  `Mês`, y = Valor, fill = Tipo)) +
+    geom_bar(stat = "identity") +
+    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_fill_viridis_d(option = "B") +
+    labs(x = "", fill = "") +
+    theme_test() +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = "bottom")
+})
+```
+
+
+
