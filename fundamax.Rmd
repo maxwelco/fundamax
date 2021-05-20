@@ -15,7 +15,7 @@ runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
-#rsconnect::deployApp('/Users/maxwelco/Documents/shiny.finances/fundamax.Rmd')
+#rsconnect::deployApp('/Users/maxwelco/Documents/fundamax/fundamax.Rmd')
 options(scipen=10000)
 library(flexdashboard)
 library(tidyverse)
