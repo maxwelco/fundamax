@@ -51,7 +51,7 @@ proventos_function <- function(papel) {
                               "Set" = "Sep",
                               "Out" = "Oct",
                               "Dez" = "Dec"),
-           Semana = week(data_com),
+           Semana = round(week(data_com),0),
            Sem_dia = wday(data_com, label = TRUE),
            Sem_dia = fct_recode(Sem_dia,
                                 "Seg" = "Mon",

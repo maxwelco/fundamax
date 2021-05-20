@@ -4,7 +4,7 @@ title: "FundaMax"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
-    vertical_layout: scroll
+    vertical_layout: fill
     theme: readable
 #    source_code: embed
     social: "menu" #[ "twitter", "linkedin", "facebook" ]
@@ -23,6 +23,8 @@ library(plotly)
 library(lubridate)
 library(rvest)
 library(RCurl)
+library(reactable)
+library(reactablefmtr)
 library(googlesheets4)
 ```
 
@@ -59,7 +61,7 @@ dataset <- readr::read_csv2(status_data)
 
 ```{r}
 inputPanel(
-actionButton("refresh", label = "Obter dados",icon = icon("fa-refresh"))
+actionButton("refresh", label = "Obter dados", icon = icon("fa-refresh"))
 )
 
 getdata <- eventReactive(input$refresh, {
@@ -71,7 +73,9 @@ getdata <- eventReactive(input$refresh, {
 
 Clique em **Obter dados** para importar a tabela de fundamentos mais atualizada do site Status invest.
 
-Aplicativo construido para avaliar ativos pelo método de [Bazin](https://dicadehoje7.com/acoes/o-metodo-de-decio-bazin-funciona), [Gordon](https://maisretorno.com/portal/termos/m/modelo-de-gordon), [Graham](https://tc.com.br/tc-school/analise-fundamentalista/valor-acao-formula-ben-graham) e [Greenblat](https://dicadehoje7.com/acoes/a-formula-magica-de-greenblatt).
+Aplicativo construido para avaliar ativos pelo método de [Bazin](https://dicadehoje7.com/acoes/o-metodo-de-decio-bazin-funciona), [Gordon](https://maisretorno.com/portal/termos/m/modelo-de-gordon), [Graham](https://tc.com.br/tc-school/analise-fundamentalista/valor-acao-formula-ben-graham) e [Greenblat](https://dicadehoje7.com/acoes/a-formula-magica-de-greenblatt). Clique em cada nome para entender a metodologia. Tabela utilizada com base na planilha MCN1 de [Eduardo Mira](https://www.instagram.com/professormira/?hl=en).
+
+Aplicativo em construção, para info: maxwelco@gmail.com.
 
 
 ## Row {data-height=400}
@@ -92,11 +96,27 @@ renderTable({
 ### Tabela de fundamentos {data-table=column data-height=1000}
 
 ```{r}
-DT::renderDataTable({
-  DT::datatable(getdata(),
-  options = list(pageLength = 50, language = list(search = 'Procurar:', 
-                                               paginate =  list('next'= "Próximo",
-                                                                previous="Anterior"))))
+renderReactable({
+  getdata() %>% 
+    reactable(
+      striped = TRUE, 
+      theme = nytimes(font_size = 13, header_font_size = 15),
+      #highlight = TRUE,
+      columns = list(TICKER = colDef(filterable = TRUE)), 
+              defaultPageSize = 20, minRows = 20, 
+                language = reactableLang(
+    searchPlaceholder = "Procurar...",
+    noData = "Nenhum dado encontrado",
+    pageInfo = "{rowStart} até {rowEnd} de {rows} ativos",
+    pagePrevious = "\u276e",
+    pageNext = "\u276f",
+
+    # Accessible labels for assistive technologies such as screen readers.
+    # These are already set by default, but don't forget to update them when
+    # changing visible text.
+    pagePreviousLabel = "Página anterior",
+    pageNextLabel = "Próxima página"
+  ))
 })
 ```
 
@@ -145,7 +165,11 @@ inputPanel(
   selectInput("select1", label = h4("Setor econômico"), 
     choices = empresas$`SETOR ECONÔMICO`, selected = 1),
   selectInput("select2", label = h4("Subsetor"), 
-    choices = empresas$SUBSETOR)
+    choices = empresas$SUBSETOR),
+    helpText("Desconto de Bazin. ", 
+"Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
+"Alguns ativos não são avaliados com a metodologia de Bazin. Por esse motivo, vai aparecer
+a mensagem 'No rows found' para alguns setores.")
 )
 
 
@@ -160,61 +184,52 @@ var1.choice <- reactive({
     observe({
     updateSelectizeInput(session, "select2", choices = var1.choice())
     })
-
-
-bazin <- reactive(status() %>%
-                    filter(`SETOR ECONÔMICO` == input$select1) %>% 
-                    filter(SUBSETOR == input$select2) %>% 
-                    arrange(desc(`DESCONTO BAZIN %`)) %>% 
-                    mutate(TICKER = fct_reorder(TICKER, `DESCONTO BAZIN %`)))
 ```
-
-
 
 
 
 Row {data-height=600}
 -----------------------------------------------------------------------
 
-### Desconto de **Bazin** para os ativos mais descontados do setor selecionado.
+### Desconto de **Bazin** para os ativos do setor selecionado.
 
 ```{r}
-renderPlotly({
-bazin() %>% 
-    filter(!is.na(`DESCONTO BAZIN %`)) %>%
-    top_n(TICKER, n = 15) %>% 
-    pivot_longer(c("DESCONTO BAZIN %", "PEG Ratio", "MÉDIA DE CRESCIMENTO %"),
-               names_to = "TIPO", values_to = "VALOR") %>% 
-    mutate(TIPO = fct_relevel(TIPO, levels = c("DESCONTO BAZIN %",
-                                               "PEG Ratio",
-                                               "MÉDIA DE CRESCIMENTO %"))) %>% 
-    ggplot(aes(x = TICKER, y = VALOR, label = `PREÇO R$`)) + 
-    geom_bar(aes(fill = VALOR), stat="identity") +
-    scale_fill_viridis_c(option = "C") +
-    theme_test() +
-    labs(y = "", x = "") +
-    coord_flip() +
-    facet_wrap(~ TIPO, scales = "free") +
-    theme(legend.position = "none")
-})
-```
-
-
-Row {data-height=600}
------------------------------------------------------------------------
-
-### Tabela com todos os ativos do **setor econômico** e **subsetor** selecionado.
-
-```{r}
-DT::renderDataTable({
-
-bazin() %>% 
-  dplyr::select("TICKER", "SETOR ECONÔMICO", "SUBSETOR",
-                "PREÇO R$", "VALUATION BAZIN RS", "DESCONTO BAZIN %",
-                "CRESCIMENTO ESPERADO %", "MÉDIA DE CRESCIMENTO %") %>% 
-  DT::datatable(options = list(language = list(search = 'Procurar:', 
-                                               paginate =  list('next'= "Próximo",
-                                                                previous="Anterior"))))
+renderReactable({
+status() %>%
+    filter(`SETOR ECONÔMICO` == input$select1) %>% 
+    filter(SUBSETOR == input$select2) %>% 
+    arrange(desc(`DESCONTO BAZIN %`)) %>% 
+    mutate(TICKER = fct_reorder(TICKER, `DESCONTO BAZIN %`)) %>% 
+    dplyr::select("TICKER", "PREÇO R$",  
+                  "VALUATION BAZIN RS", 
+                  "DESCONTO BAZIN %",
+                  "PEG Ratio", "MÉDIA DE CRESCIMENTO %") %>% 
+    filter(!is.na(`DESCONTO BAZIN %`)) %>% 
+    filter(!is.infinite(`DESCONTO BAZIN %`)) %>%
+    mutate(`DESCONTO BAZIN %` = round(`DESCONTO BAZIN %`, 0)) %>% 
+    reactable(pagination = FALSE,
+              theme = nytimes(font_size = 13, header_font_size = 15),
+              resizable = TRUE,
+              wrap = TRUE,
+              columns = list(
+                TICKER = colDef(name = "Ticker", filterable = TRUE),
+                `PREÇO R$` = colDef(name = "Preço (R$)", align = "center", 
+                                    cell = color_tiles(., colors = 
+                                                         c("#ccffff",
+                                                               "#1e90ff"))),
+                `VALUATION BAZIN RS` = colDef(name = "Valuation Bazin (R$)",  align = "center",
+                                               cell = color_tiles(., colors = 
+                                                         c("#ccffff",
+                                                               "#1e90ff"))),
+                `DESCONTO BAZIN %` = colDef(
+                                             name = "Desconto Bazin (%)",
+                                             align = "center", 
+                                             cell = data_bars_pos_neg(., 
+                                                       colors = c("#ff3030", "#1e90ff"))),
+                `PEG Ratio` = colDef(name = "PEG ratio", align = "center"),
+                `MÉDIA DE CRESCIMENTO %` = colDef(name = "Média de crescimento (%)", align = "center", 
+                                                  cell = data_bars_pos_neg(., 
+                                                       colors = c("#ff3030", "#1e90ff")))))
 })
 ```
 
@@ -231,8 +246,11 @@ inputPanel(
     choices = empresas$`SETOR ECONÔMICO`, selected = 1),
   selectInput("select4", label = h4("Subsetor"), 
     choices = empresas$SUBSETOR),
-  numericInput("risco", label = h4("Risco: "), value = 15)
-
+  numericInput("risco", label = h4("Risco: "), value = 15),
+  helpText("Desconto de Gordon. ", 
+"Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
+"Alguns ativos não são avaliados com a metodologia de Gordon. Por esse motivo, vai aparecer
+a mensagem 'No rows found' para alguns setores.")
 )
 
 
@@ -247,62 +265,52 @@ var2.choice <- reactive({
     observe({
     updateSelectizeInput(session, "select4", choices = var2.choice())
     })
-
-
-gordon <- reactive(status() %>%
-                    filter(`SETOR ECONÔMICO` == input$select3) %>% 
-                    filter(SUBSETOR == input$select4) %>% 
-                    arrange(desc(`DESCONTO GORDON %`)) %>% 
-                    mutate(TICKER = fct_reorder(TICKER, `DESCONTO GORDON %`))) 
 ```
-
-
 
 
 Row {data-height=600}
 -----------------------------------------------------------------------
 
 
-### Desconto de **Gordon** para os ativos mais descontados do setor selecionado.
+### Desconto de **Gordon** para os ativos do setor selecionado.
 
 ```{r}
-renderPlotly({
-  
-gordon() %>% 
-    filter(!is.na(`DESCONTO GORDON %`)) %>%
-    top_n(TICKER, n = 15) %>% 
-    pivot_longer(c("DESCONTO GORDON %", "PEG Ratio", "MÉDIA DE CRESCIMENTO %"),
-               names_to = "TIPO", values_to = "VALOR") %>% 
-    mutate(TIPO = fct_relevel(TIPO, levels = c("DESCONTO GORDON %",
-                                               "PEG Ratio",
-                                               "MÉDIA DE CRESCIMENTO %"))) %>% 
-    ggplot(aes(x = TICKER, y = VALOR, label = `PREÇO R$`)) + 
-    geom_bar(aes(fill = VALOR), stat="identity") +
-    scale_fill_viridis_c(option = "C") +
-    theme_test() +
-    labs(y = "", x = "") +
-    coord_flip() +
-    facet_wrap(~ TIPO, scales = "free") +
-    theme(legend.position = "none")
-})
-```
-
-
-
-Row {data-height=600}
------------------------------------------------------------------------
-
-### Tabela com todos os ativos do **setor econômico** e **subsetor** selecionado.
-
-```{r}
-DT::renderDataTable({
-  gordon() %>% 
-  dplyr::select("TICKER", "SETOR ECONÔMICO", "SUBSETOR",
-                "PREÇO R$", "VALUATION GORDON R$", "DESCONTO GORDON %",
-                "PEG Ratio", "CRESCIMENTO ESPERADO %", "MÉDIA DE CRESCIMENTO %") %>% 
-  DT::datatable(options = list(language = list(search = 'Procurar:', 
-                                               paginate =  list('next'= "Próximo",
-                                                                previous="Anterior"))))
+renderReactable({
+  status() %>%
+    filter(`SETOR ECONÔMICO` == input$select3) %>% 
+    filter(SUBSETOR == input$select4) %>% 
+    arrange(desc(`DESCONTO GORDON %`)) %>% 
+    mutate(TICKER = fct_reorder(TICKER, `DESCONTO GORDON %`)) %>% 
+    dplyr::select("TICKER", "PREÇO R$",  
+                  "VALUATION GORDON R$", 
+                  "DESCONTO GORDON %",
+                  "PEG Ratio", "MÉDIA DE CRESCIMENTO %") %>% 
+    filter(!is.na(`DESCONTO GORDON %`)) %>% 
+    filter(!is.infinite(`DESCONTO GORDON %`)) %>%
+    mutate(`DESCONTO GORDON %` = round(`DESCONTO GORDON %`, 0)) %>% 
+    reactable(pagination = FALSE,
+              theme = nytimes(font_size = 13, header_font_size = 15),
+              resizable = TRUE,
+              wrap = TRUE,
+              columns = list(
+                TICKER = colDef(name = "Ticker", filterable = TRUE),
+                `PREÇO R$` = colDef(name = "Preço (R$)", align = "center", 
+                                    cell = color_tiles(., colors = 
+                                                         c("#ccffff",
+                                                               "#1e90ff"))),
+                `VALUATION GORDON R$` = colDef(name = "Valuation Gordon (R$)",  align = "center",
+                                               cell = color_tiles(., colors = 
+                                                         c("#ccffff",
+                                                               "#1e90ff"))),
+                `DESCONTO GORDON %` = colDef(
+                                             name = "Desconto Gordon (%)",
+                                             align = "center", 
+                                             cell = data_bars_pos_neg(., 
+                                                       colors = c("#ff3030", "#1e90ff"))),
+                `PEG Ratio` = colDef(name = "PEG ratio", align = "center"),
+                `MÉDIA DE CRESCIMENTO %` = colDef(name = "Média de crescimento (%)", align = "center", 
+                                                  cell = data_bars_pos_neg(., 
+                                                       colors = c("#ff3030", "#1e90ff")))))
 })
 ```
 
@@ -320,7 +328,11 @@ inputPanel(
 selectInput("select5", label = h4("Setor econômico"), 
     choices = empresas$`SETOR ECONÔMICO`, selected = 1),
 selectInput("select6", label = h4("Subsetor"), 
-    choices = empresas$SUBSETOR)
+    choices = empresas$SUBSETOR),
+  helpText("Desconto de Graham. ", 
+"Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
+"Alguns ativos não são avaliados com a metodologia de Graham. Por esse motivo, vai aparecer
+a mensagem 'No rows found' para alguns setores.")
 )
 
 
@@ -335,13 +347,6 @@ var3.choice <- reactive({
     observe({
     updateSelectizeInput(session, "select6", choices = var3.choice())
     })
-       
-
-graham <- reactive(status() %>% 
-                    filter(`SETOR ECONÔMICO` == input$select5) %>% 
-                    filter(SUBSETOR == input$select6) %>% 
-                    arrange(desc(`DESCONTO GRAHAM %`)) %>% 
-                    mutate(TICKER = fct_reorder(TICKER, `DESCONTO GRAHAM %`)))
 ```
 
 
@@ -349,49 +354,50 @@ graham <- reactive(status() %>%
 Row {data-height=600}
 -----------------------------------------------------------------------
 
-### Desconto de **Graham** para os ativos mais descontados do setor selecionado.
+### Desconto de **Graham** para os ativos do setor selecionado.
 
 ```{r}
-renderPlotly({
-  
-graham() %>%
-    filter(!is.na(`DESCONTO GRAHAM %`)) %>%
-    top_n(TICKER, n = 15) %>% 
-    pivot_longer(c("DESCONTO GRAHAM %", "PEG Ratio", "MÉDIA DE CRESCIMENTO %"),
-               names_to = "TIPO", values_to = "VALOR") %>% 
-    mutate(TIPO = fct_relevel(TIPO, levels = c("DESCONTO GRAHAM %",
-                                               "PEG Ratio",
-                                               "MÉDIA DE CRESCIMENTO %"))) %>% 
-    ggplot(aes(x = TICKER, y = VALOR, label = `PREÇO R$`)) + 
-    geom_bar(aes(fill = VALOR), stat="identity") +
-    scale_fill_viridis_c(option = "C") +
-    theme_test() +
-    labs(y = "", x = "") +
-    coord_flip() +
-    facet_wrap(~ TIPO, scales = "free") +
-    theme(legend.position = "none")
+renderReactable({
+status() %>%
+    filter(!is.na(`DESCONTO GRAHAM %`)) %>% 
+    filter(!is.infinite(`DESCONTO GRAHAM %`)) %>% 
+    filter(`SETOR ECONÔMICO` == input$select5) %>% 
+    filter(SUBSETOR == input$select6) %>% 
+    arrange(desc(`DESCONTO GRAHAM %`)) %>% 
+    mutate(TICKER = fct_reorder(TICKER, `DESCONTO GRAHAM %`)) %>% 
+    dplyr::select("TICKER", "PREÇO R$",  
+                  "VALUATION GRAHAM R$", 
+                  "DESCONTO GRAHAM %",
+                  "PEG Ratio", "MÉDIA DE CRESCIMENTO %") %>% 
+    mutate(`DESCONTO GRAHAM %` = round(`DESCONTO GRAHAM %`, 0)) %>% 
+    reactable(pagination = FALSE,
+              theme = nytimes(font_size = 13, header_font_size = 15),
+              resizable = TRUE,
+              wrap = TRUE,
+              columns = list(
+                TICKER = colDef(name = "Ticker", filterable = TRUE),
+                `PREÇO R$` = colDef(name = "Preço (R$)", align = "center", 
+                                    cell = color_tiles(., colors = 
+                                                         c("#ccffff",
+                                                               "#1e90ff"))),
+                `VALUATION GRAHAM R$` = colDef(name = "Valuation Graham (R$)",  align = "center",
+                                               cell = color_tiles(., colors = 
+                                                         c("#ccffff",
+                                                               "#1e90ff"))),
+                `DESCONTO GRAHAM %` = colDef(
+                                             name = "Desconto Graham (%)",
+                                             align = "center", 
+                                             cell = data_bars_pos_neg(., 
+                                                       colors = c("#ff3030", "#1e90ff"))),
+                `PEG Ratio` = colDef(name = "PEG ratio", align = "center"),
+                `MÉDIA DE CRESCIMENTO %` = colDef(name = "Média de crescimento (%)", align = "center", 
+                                                  cell = data_bars_pos_neg(., 
+                                                       colors = c("#ff3030", "#1e90ff")))))
 })
 ```
 
 
 
-Row {data-height=600}
------------------------------------------------------------------------
-
-### Tabela com todos os ativos do **setor econômico** e **subsetor** selecionado.
-
-```{r}
-DT::renderDataTable({
-  graham() %>%  
-  dplyr::select("TICKER", "SETOR ECONÔMICO", "SUBSETOR", "PREÇO R$",  
-                "VALUATION GRAHAM R$", 
-                "DESCONTO GRAHAM %",
-                "PEG Ratio", "CRESCIMENTO ESPERADO %", "MÉDIA DE CRESCIMENTO %") %>% 
-  DT::datatable(options = list(language = list(search = 'Procurar:', 
-                                               paginate =  list('next'= "Próximo",
-                                                                previous="Anterior"))))
-})
-```
 
 
 
@@ -404,15 +410,18 @@ Inputs {.sidebar}
 
 ```{r}
 inputPanel(
-sliderInput("ativo5", label = h4("Quantidade de ativos: "), min = 1, 
-            value = 20, max = 50)
+helpText("Índice Greenblat", 
+"Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
+"Empresas com valores de ROIC e EV/EBIT negativos foram retirados.",
+"Aguarde um instante para gerar a tabela.")
 )
 
 
-greendt <- reactive({getdata() %>% 
+greendt <- reactive({status() %>% 
     mutate(TICKER = as.character(TICKER)) %>% 
-    mutate(TICKER = str_remove(TICKER, "([0-9]+).*$")) %>% 
-    distinct(TICKER, .keep_all = TRUE) %>% 
+    filter(PRECO < 1000 & PRECO > 0) %>% 
+ #   mutate(TICKER = str_remove(TICKER, "([0-9]+).*$")) %>% 
+ #   distinct(TICKER, .keep_all = TRUE) %>% 
     dplyr::select(TICKER, PRECO, `EV/EBIT`, ROIC) %>%
     filter(`EV/EBIT` > 0 & ROIC > 0) %>% 
     arrange(`EV/EBIT`) %>% 
@@ -431,40 +440,37 @@ greendt <- reactive({getdata() %>%
 
 ## Row {data-height=600}
 
+### Índice Greenblatt
 
-### Figura índice Greenblatt 
 
 ```{r }
-renderPlotly({
-    greendt() %>% 
-    top_n(TICKER, n = input$ativo5) %>% 
-    ggplot(aes(x = TICKER, y = `NOTA FINAL`, 
-                                 fill = `NOTA FINAL`)) +
-    geom_bar(stat = "identity") +
-    scale_fill_viridis_c(option = "C") +
-    theme_test() +
-    labs(x = "") +
-    coord_flip() + 
-    theme(legend.position = "none")
+renderReactable({
+    greendt() %>%
+    dplyr::select("TICKER", "PRECO", "NOTA EV/EBIT", "NOTA ROIC", "NOTA FINAL") %>% 
+    reactable(pagination = FALSE,
+              theme = nytimes(font_size = 13, header_font_size = 15),
+              resizable = TRUE,
+              wrap = TRUE,
+              columns = list(
+                TICKER = colDef(name = "Ticker", filterable = TRUE),
+                 PRECO = colDef(name = "Preço (R$)", align = "center", 
+                                    cell = color_tiles(., colors = 
+                                                         c("#ccffff",
+                                                               "#1e90ff"))),
+                `NOTA EV/EBIT` = colDef(name = "Nota EV/EBIT",  align = "center", 
+                                       cell = data_bars(., text_position = "inside-end",
+                                                fill_color = c("#ff3030", "#ffffff",
+                                                               "#1e90ff"))),
+                `NOTA ROIC` = colDef(name = "Nota ROIC",  align = "center", 
+                                             cell = data_bars(., 
+                                                              text_position = "inside-end",
+                                                fill_color = c("#ff3030", "#ffffff",
+                                                               "#1e90ff"))),
+                `NOTA FINAL` = colDef(defaultSortOrder = "desc",
+                                      name = "Nota final", na = "-",  align = "center", 
+                                        style = color_scales(., span = TRUE))))
 })
 ```
-
-
-### Tabela índice Greenblatt 
-
-```{r}
-DT::renderDataTable({
-   greendt() %>%
-  dplyr::select("TICKER", "NOTA EV/EBIT", "NOTA ROIC", "NOTA FINAL") %>% 
-  DT::datatable(options = list(pageLength = 15, language = list(search = 'Procurar:', 
-                                               paginate =  list('next'= "Próximo",
-                                                                previous="Anterior"))))
-  
-})
-```
-
-
-
 
 
 
@@ -478,16 +484,21 @@ Inputs {.sidebar}
 -----------------------------------------------------------------------
 ```{r}
 inputPanel(
-selectInput("ativo6", label = "Ativo", choices = fundamentus2$Papel)
+selectInput("ativo6", label = "Ativo", choices = fundamentus2$Papel),
+helpText("Proventos. ", 
+"Nota: Os dados são baseados no site Fundamentus",
+"Se aparecer a mensagen de 'Error' significa que a empresa nunca pagou dividendos/juros.")
 )
 ```
 
 
 
-## Gráfico {data-height=400}
+## Gráfico {.tabset data-height=400}
 
 
 ### Data com - Ano 
+
+
 
 ```{r}
 renderPlotly({
@@ -504,11 +515,26 @@ proventos_function(input$ativo6) %>%
 ```
 
 
+### Data com - Mês
 
-Row {data-height=400}
------------------------------------------------------------------------
 
-### Data com - Semana
+
+```{r}
+renderPlotly({
+proventos_function(input$ativo6) %>% 
+    ggplot(aes(x =  `Mês`, y = Valor, fill = Tipo)) +
+    geom_bar(stat = "identity") +
+    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_fill_viridis_d(option = "B") +
+    labs(x = "", fill = "") +
+    theme_test() +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position = "bottom")
+})
+```
+
+
+### Data com - Semana {.tabset}
 
 ```{r}
 renderPlotly({
@@ -524,7 +550,13 @@ proventos_function(input$ativo6) %>%
 })
 ```
 
+
+Column {data-table=row}
+-----------------------------------------------------------------------
+
+
 ### Data com - Dia da semana
+
 
 ```{r}
 renderPlotly({
@@ -541,11 +573,8 @@ proventos_function(input$ativo6) %>%
 ```
 
 
-
-Row {data-height=400}
------------------------------------------------------------------------
-
 ### Data com - Dia
+
 
 ```{r}
 renderPlotly({
@@ -561,21 +590,6 @@ proventos_function(input$ativo6) %>%
 })
 ```
 
-### Data com - Mês
-
-```{r}
-renderPlotly({
-proventos_function(input$ativo6) %>% 
-    ggplot(aes(x =  `Mês`, y = Valor, fill = Tipo)) +
-    geom_bar(stat = "identity") +
-    scale_y_continuous(name = "Valor por 1 ação (R$)") +
-    scale_fill_viridis_d(option = "B") +
-    labs(x = "", fill = "") +
-    theme_test() +
-    theme(axis.text.x = element_text(angle = 90),
-          legend.position = "bottom")
-})
-```
 
 
 
