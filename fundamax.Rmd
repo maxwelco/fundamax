@@ -492,7 +492,7 @@ helpText("Proventos. ",
 ```
 
 
-
+ 
 ## Gráfico {.tabset data-height=400}
 
 
