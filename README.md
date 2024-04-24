@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5079901.svg)](http://doi.org/10.5281/zenodo.5079901)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5079901.svg)](http://doi.org/10.5281/zenodo.5079901) 
 
 
 # fundamax
