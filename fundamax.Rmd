@@ -20,6 +20,7 @@ options(scipen=10000)
 library(flexdashboard)
 library(tidyverse)
 library(plotly)
+library(shiny)
 library(lubridate)
 library(rvest)
 library(RCurl)
@@ -65,7 +66,7 @@ actionButton("refresh", label = "Obter dados", icon = icon("fa-refresh"))
 )
 
 getdata <- eventReactive(input$refresh, {
-    dataset <- readr::read_csv2(status_data)
+    dataset <- readr::read_csv2(status_invest)
 })
 
 ```
