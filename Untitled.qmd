@@ -1,0 +1,39 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+
+
+```{r}
+dataset |> 
+    left_join(empresas, by = "TICKER") %>% 
+    mutate(`PREÇO R$` = PRECO) %>%
+    mutate(DPA = (DY/100) * `PREÇO R$`) %>% 
+    mutate(`VALUATION BAZIN RS` = DPA / 0.06) %>% 
+    mutate(`DESCONTO BAZIN %` = 
+             ((`PREÇO R$` - `VALUATION BAZIN RS`) / `VALUATION BAZIN RS`) * 100 * -1) %>% 
+    mutate(`VALUATION GRAHAM R$` = 
+             (22.5 * LPA * VPA)^0.5) %>% 
+    mutate(`DESCONTO GRAHAM %` = 
+             ((`PREÇO R$` - `VALUATION GRAHAM R$`) / 
+                                  `VALUATION GRAHAM R$`)*100 * -1) %>% 
+    mutate(`VALUATION GORDON R$` = 
+             (DPA * (1 + (`CAGR LUCROS 5 ANOS`/100))) / input$risco) %>% 
+    mutate(`DESCONTO GORDON %` = 
+             ((`PREÇO R$` - `VALUATION GORDON R$`) / 
+                                  `VALUATION GORDON R$`)*100 * -1) %>% 
+    mutate(`CAGR LUCROS 5 ANOS` = 
+           if_else(is.na(`CAGR LUCROS 5 ANOS`), 0, `CAGR LUCROS 5 ANOS`)) %>%
+    mutate(PAYOUT = DPA / LPA) %>% 
+    mutate(PAYOUT = 
+           if_else(is.na(PAYOUT), 0, PAYOUT)) %>%
+    mutate(`CRESCIMENTO ESPERADO %` = 
+             (1 - PAYOUT) * ROE) %>% 
+    mutate(`MÉDIA DE CRESCIMENTO %` = 
+             (`CAGR LUCROS 5 ANOS` + `CRESCIMENTO ESPERADO %`)/2) %>% 
+    mutate_if(is.double, ~round(., 2)) %>% 
+    filter(`PREÇO R$` != 0 & `PREÇO R$` < 1000) 
+```
+

@@ -247,7 +247,8 @@ inputPanel(
     choices = empresas$`SETOR ECONÔMICO`, selected = 1),
   selectInput("select4", label = h4("Subsetor"), 
     choices = empresas$SUBSETOR),
-  numericInput("risco", label = h4("Risco: "), value = 15),
+  numericInput("risco", label = h4("Risco: "), min = 0, 
+            max = 100, value = 15),
   helpText("Desconto de Gordon. ", 
 "Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
 "Alguns ativos não são avaliados com a metodologia de Gordon. Por esse motivo, vai aparecer

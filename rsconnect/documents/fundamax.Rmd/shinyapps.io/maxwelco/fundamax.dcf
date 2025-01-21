@@ -1,0 +1,12 @@
+name: fundamax
+title: fundamax
+username: maxwelco
+account: maxwelco
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12711381
+bundleId: 9100875
+url: https://maxwelco.shinyapps.io/fundamax/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
