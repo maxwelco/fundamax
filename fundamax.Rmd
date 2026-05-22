@@ -40,7 +40,7 @@ source("proventos_function.R")
 # empresas listadas - precisa atualizar
 #gs4_auth(email = "maxwelco@gmail.com")
 #empresas <- read_sheet("https://docs.google.com/spreadsheets/d/1vtts8WdUYYVqi9ygLlIuWzS_ISefoR4WDLmC2E3pXCw/edit#gid=0") %>% 
- # arrange(`SETOR ECONÔMICO`, SUBSETOR) 
+ # arrange(`SETOR ECONOMICO`, SUBSETOR) 
 #readr::write_csv(empresas, "empresas.csv")
 empresas <- read_csv("empresas.csv")
 ```
@@ -164,12 +164,12 @@ status <- reactive({getdata() %>%
 ```{r}
 inputPanel(
   selectInput("select1", label = h4("Setor econômico"), 
-    choices = empresas$`SETOR ECONÔMICO`, selected = 1),
+    choices = empresas$`SETOR ECONOMICO`, selected = 1),
   selectInput("select2", label = h4("Subsetor"), 
     choices = empresas$SUBSETOR),
     helpText("Desconto de Bazin. ", 
 "Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
-"Alguns ativos não são avaliados com a metodologia de Bazin. Por esse motivo, vai aparecer
+"Alguns ativos nao sao avaliados com a metodologia de Bazin. Por esse motivo, vai aparecer
 a mensagem 'No rows found' para alguns setores.")
 )
 
@@ -177,7 +177,7 @@ a mensagem 'No rows found' para alguns setores.")
 # Selectize 2 choice's list <---
 var1.choice <- reactive({
                  status() %>% 
-                 filter(`SETOR ECONÔMICO` == input$select1) %>%
+                 filter(`SETOR ECONOMICO` == input$select1) %>%
                  pull(SUBSETOR)
                   })
     
@@ -197,7 +197,7 @@ Row {data-height=600}
 ```{r}
 renderReactable({
 status() %>%
-    filter(`SETOR ECONÔMICO` == input$select1) %>% 
+    filter(`SETOR ECONOMICO` == input$select1) %>% 
     filter(SUBSETOR == input$select2) %>% 
     arrange(desc(`DESCONTO BAZIN %`)) %>% 
     mutate(TICKER = fct_reorder(TICKER, `DESCONTO BAZIN %`)) %>% 
@@ -244,14 +244,14 @@ Inputs {.sidebar}
 ```{r}
 inputPanel(
   selectInput("select3", label = h4("Setor econômico"), 
-    choices = empresas$`SETOR ECONÔMICO`, selected = 1),
+    choices = empresas$`SETOR ECONOMICO`, selected = 1),
   selectInput("select4", label = h4("Subsetor"), 
     choices = empresas$SUBSETOR),
   numericInput("risco", label = h4("Risco: "), min = 0, 
             max = 100, value = 15),
   helpText("Desconto de Gordon. ", 
 "Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
-"Alguns ativos não são avaliados com a metodologia de Gordon. Por esse motivo, vai aparecer
+"Alguns ativos nao sao avaliados com a metodologia de Gordon. Por esse motivo, vai aparecer
 a mensagem 'No rows found' para alguns setores.")
 )
 
@@ -259,7 +259,7 @@ a mensagem 'No rows found' para alguns setores.")
 # Selectize 2 choice's list <---
 var2.choice <- reactive({
                  status() %>% 
-                 filter(`SETOR ECONÔMICO` == input$select3) %>%
+                 filter(`SETOR ECONOMICO` == input$select3) %>%
                  pull(SUBSETOR)
                   })
     
@@ -279,7 +279,7 @@ Row {data-height=600}
 ```{r}
 renderReactable({
   status() %>%
-    filter(`SETOR ECONÔMICO` == input$select3) %>% 
+    filter(`SETOR ECONOMICO` == input$select3) %>% 
     filter(SUBSETOR == input$select4) %>% 
     arrange(desc(`DESCONTO GORDON %`)) %>% 
     mutate(TICKER = fct_reorder(TICKER, `DESCONTO GORDON %`)) %>% 
@@ -328,12 +328,12 @@ renderReactable({
 ```{r}
 inputPanel(
 selectInput("select5", label = h4("Setor econômico"), 
-    choices = empresas$`SETOR ECONÔMICO`, selected = 1),
+    choices = empresas$`SETOR ECONOMICO`, selected = 1),
 selectInput("select6", label = h4("Subsetor"), 
     choices = empresas$SUBSETOR),
   helpText("Desconto de Graham. ", 
-"Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
-"Alguns ativos não são avaliados com a metodologia de Graham. Por esse motivo, vai aparecer
+"Nota: Os dados estao filtrados para ticker com valores entre R$ 0 e R$ 1000.",
+"Alguns ativos nao sao avaliados com a metodologia de Graham. Por esse motivo, vai aparecer
 a mensagem 'No rows found' para alguns setores.")
 )
 
@@ -341,7 +341,7 @@ a mensagem 'No rows found' para alguns setores.")
 # Selectize 2 choice's list <---
 var3.choice <- reactive({
                  status() %>% 
-                 filter(`SETOR ECONÔMICO` == input$select5) %>%
+                 filter(`SETOR ECONOMICO` == input$select5) %>%
                  pull(SUBSETOR)
                   })
     
@@ -363,7 +363,7 @@ renderReactable({
 status() %>%
     filter(!is.na(`DESCONTO GRAHAM %`)) %>% 
     filter(!is.infinite(`DESCONTO GRAHAM %`)) %>% 
-    filter(`SETOR ECONÔMICO` == input$select5) %>% 
+    filter(`SETOR ECONOMICO` == input$select5) %>% 
     filter(SUBSETOR == input$select6) %>% 
     arrange(desc(`DESCONTO GRAHAM %`)) %>% 
     mutate(TICKER = fct_reorder(TICKER, `DESCONTO GRAHAM %`)) %>% 
@@ -392,7 +392,7 @@ status() %>%
                                              cell = data_bars_pos_neg(., 
                                                        colors = c("#ff3030", "#1e90ff"))),
                 `PEG Ratio` = colDef(name = "PEG ratio", align = "center"),
-                `MÉDIA DE CRESCIMENTO %` = colDef(name = "Média de crescimento (%)", align = "center", 
+                `MÉDIA DE CRESCIMENTO %` = colDef(name = "Media de crescimento (%)", align = "center", 
                                                   cell = data_bars_pos_neg(., 
                                                        colors = c("#ff3030", "#1e90ff")))))
 })
@@ -413,7 +413,7 @@ Inputs {.sidebar}
 ```{r}
 inputPanel(
 helpText("Índice Greenblat", 
-"Nota: Os dados estão filtrados para ticker com valores entre R$ 0 e R$ 1000.",
+"Nota: Os dados estao filtrados para ticker com valores entre R$ 0 e R$ 1000.",
 "Empresas com valores de ROIC e EV/EBIT negativos foram retirados.",
 "Aguarde um instante para gerar a tabela.")
 )
@@ -524,9 +524,9 @@ proventos_function(input$ativo6) %>%
 ```{r}
 renderPlotly({
 proventos_function(input$ativo6) %>% 
-    ggplot(aes(x =  `Mês`, y = Valor, fill = Tipo)) +
+    ggplot(aes(x =  `Mes`, y = Valor, fill = Tipo)) +
     geom_bar(stat = "identity") +
-    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_y_continuous(name = "Valor por 1 acao (R$)") +
     scale_fill_viridis_d(option = "B") +
     labs(x = "", fill = "") +
     theme_test() +
@@ -543,7 +543,7 @@ renderPlotly({
 proventos_function(input$ativo6) %>% 
   ggplot(aes(x = Semana, y = Valor, fill = Tipo)) +
     geom_bar(stat = "identity") +
-    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_y_continuous(name = "Valor por 1 acao (R$)") +
     scale_fill_viridis_d(option = "B") +
     labs(x = "", fill = "") +
     theme_test() +
@@ -565,7 +565,7 @@ renderPlotly({
 proventos_function(input$ativo6) %>% 
     ggplot(aes(x = Sem_dia, y = Valor, fill = Tipo)) +
     geom_bar(stat = "identity") +
-    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_y_continuous(name = "Valor por 1 acao (R$)") +
     scale_fill_viridis_d(option = "B") +
     labs(x = "", fill = "") +
     theme_test() +
@@ -583,7 +583,7 @@ renderPlotly({
 proventos_function(input$ativo6) %>% 
     ggplot(aes(x = Dia, y = Valor, fill = Tipo)) +
     geom_bar(stat = "identity") +
-    scale_y_continuous(name = "Valor por 1 ação (R$)") +
+    scale_y_continuous(name = "Valor por 1 acao (R$)") +
     scale_fill_viridis_d(option = "B") +
     labs(x = "", fill = "") +
     theme_test() +

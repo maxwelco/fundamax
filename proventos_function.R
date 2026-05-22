@@ -42,8 +42,8 @@ proventos_function <- function(papel) {
     mutate(data_com = dmy(data_com),
            data_de_pagamento = dmy(data_de_pagamento),
            tipo = as_factor(tipo),
-           `Mês` = month(data_com, label = TRUE),
-           `Mês` = fct_recode(`Mês`,
+           `Mes` = month(data_com, label = TRUE),
+           `Mes` = fct_recode(`Mes`,
                               "Fev" = "Feb",
                               "Abr" = "Apr",
                               "Mai" = "May",
@@ -65,6 +65,6 @@ proventos_function <- function(papel) {
            Tipo = fct_recode(Tipo,
                              "Jrs Cap Próprio" = "Jrs Cap Proprio")) %>%
     mutate(Valor = valor / por_quantas_acoes) %>%
-    dplyr::select(data_com, `Mês`, Semana, Dia, Valor, everything())
+    dplyr::select(data_com, `Mes`, Semana, Dia, Valor, everything())
   papel2
 }
